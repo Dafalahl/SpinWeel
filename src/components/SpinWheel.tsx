@@ -225,21 +225,32 @@ export default function SpinWheel({
 
     initAudio();
 
-    const duration = 8000; // Increased to 8 seconds for maximum suspense!
+    const duration = 9000; // 9 seconds for dramatic slow-down effect
     const startRotation = angleRef.current % (2 * Math.PI);
     const numSegments = prizes.length;
     const anglePerSegment = (2 * Math.PI) / numSegments;
 
-    // Calculate landing rotation:
+    // Calculate landing rotation (counter-clockwise / berlawanan jarum jam):
     // Pointer is at the top (3/2 * PI). We want the winning segment to align with it.
     // Randomize where in the segment it lands (between 15% and 85%) for visual realism.
     const randomOffset = 0.15 + Math.random() * 0.7;
     const targetSegmentLanding = (winningIndex + randomOffset) * anglePerSegment;
-    const baseTargetAngle = 1.5 * Math.PI - targetSegmentLanding;
-    
-    // Add 12 full rotations for a thrilling high-speed start
-    const totalRotationTarget = baseTargetAngle + 2 * Math.PI * 12;
-    const deltaRotation = totalRotationTarget - startRotation;
+
+    // Calculate the base target angle for the winning segment to align under the pointer
+    let baseTargetAngle = 1.5 * Math.PI - targetSegmentLanding;
+
+    // Normalize so baseTargetAngle is strictly below startRotation (counter-clockwise = decreasing angle)
+    while (baseTargetAngle >= startRotation) {
+      baseTargetAngle -= 2 * Math.PI;
+    }
+    // Ensure at least one full revolution gap below startRotation
+    while (baseTargetAngle > startRotation - 2 * Math.PI) {
+      baseTargetAngle -= 2 * Math.PI;
+    }
+
+    // Add 10 full counter-clockwise rotations for dramatic effect (negative = CCW)
+    const totalRotationTarget = baseTargetAngle - 2 * Math.PI * 10;
+    const deltaRotation = totalRotationTarget - startRotation; // Always negative = counter-clockwise
     
     const startTime = performance.now();
 
@@ -247,9 +258,14 @@ export default function SpinWheel({
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
 
-      // Quintic ease-out function for an extremely long, suspenseful slow-down tail
-      const easeOutQuint = 1 - Math.pow(1 - progress, 5);
-      const currentAngle = startRotation + deltaRotation * easeOutQuint;
+      // Smooth ease-in-out-cubic: gradual acceleration then long smooth deceleration
+      // First half: accelerate (cubic ease-in)
+      // Second half: decelerate smoothly (cubic ease-out)
+      const eased = progress < 0.5
+        ? 4 * Math.pow(progress, 3)
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+      const currentAngle = startRotation + deltaRotation * eased;
       
       angleRef.current = currentAngle;
 
