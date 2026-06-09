@@ -56,6 +56,11 @@ export default function AdminClient({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  // Sync state with server props when database records update (e.g. after a save)
+  React.useEffect(() => {
+    setPrizes(initialPrizes);
+  }, [initialPrizes]);
+
   // Global Settings States
   const [settings, setSettings] = useState({
     force_lose: initialSettings?.force_lose || false,
@@ -181,6 +186,20 @@ export default function AdminClient({
   };
 
   const handleSave = async () => {
+    // Validate uniqueness and non-emptiness of prize names
+    const names = prizes.map((p) => p.name.trim().toLowerCase());
+    const hasDuplicates = names.some((name, index) => names.indexOf(name) !== index);
+    if (hasDuplicates) {
+      setSaveError('Nama hadiah tidak boleh duplikat/sama!');
+      return;
+    }
+
+    const hasEmptyName = prizes.some((p) => p.name.trim() === '');
+    if (hasEmptyName) {
+      setSaveError('Nama hadiah tidak boleh kosong!');
+      return;
+    }
+
     if (!isValidProbability) return;
 
     setSaving(true);

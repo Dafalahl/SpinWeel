@@ -30,6 +30,24 @@ export async function POST(request: Request) {
     };
 
     // 1. Server-side validation
+    // Validate uniqueness and non-emptiness of prize names
+    const names = upserts.map((p) => p.name.trim().toLowerCase());
+    const hasDuplicates = names.some((name, index) => names.indexOf(name) !== index);
+    if (hasDuplicates) {
+      return NextResponse.json(
+        { error: 'Nama hadiah tidak boleh duplikat/sama.' },
+        { status: 400 }
+      );
+    }
+
+    const hasEmptyName = upserts.some((p) => p.name.trim() === '');
+    if (hasEmptyName) {
+      return NextResponse.json(
+        { error: 'Nama hadiah tidak boleh kosong.' },
+        { status: 400 }
+      );
+    }
+
     // Calculate the total probability of active prizes after this update
     const activePrizes = upserts.filter((p) => p.active);
     const activeTotal = activePrizes.reduce((sum: number, p) => sum + Number(p.probability), 0);
