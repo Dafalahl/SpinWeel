@@ -57,4 +57,17 @@ SELECT prize_name, COUNT(*)::INTEGER AS win_count
 FROM spins
 GROUP BY prize_name;
 
+-- Create settings table for global stand controls
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
+-- Seed initial settings
+INSERT INTO settings (key, value)
+VALUES
+  ('force_lose', 'false'),
+  ('spin_pin', '')
+ON CONFLICT (key) DO NOTHING;
+
 

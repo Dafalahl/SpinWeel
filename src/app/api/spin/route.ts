@@ -13,8 +13,44 @@ interface Prize {
   active: boolean;
 }
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
+    // Fetch global settings from DB
+    const { data: settingsData, error: settingsError } = await supabaseAdmin
+      .from('settings')
+      .select('*');
+
+    let forceLose = false;
+    let spinPin = '';
+
+    if (!settingsError && settingsData) {
+      const forceLoseSetting = settingsData.find(s => s.key === 'force_lose');
+      const spinPinSetting = settingsData.find(s => s.key === 'spin_pin');
+      
+      forceLose = forceLoseSetting?.value === 'true';
+      spinPin = spinPinSetting?.value || '';
+    } else if (settingsError) {
+      console.warn('Settings table not found or query failed, falling back to default:', settingsError.message || settingsError);
+    }
+
+    // Verify PIN if enabled
+    if (spinPin.trim() !== '') {
+      let bodyPin = '';
+      try {
+        const body = await request.json();
+        bodyPin = body.pin || '';
+      } catch {
+        // Body might be empty or invalid JSON
+      }
+
+      if (bodyPin !== spinPin) {
+        return NextResponse.json(
+          { error: 'PIN_REQUIRED', message: 'PIN Pengaman Stand diperlukan atau salah.' },
+          { status: 403 }
+        );
+      }
+    }
+
     const maxRetries = 5;
     let attempt = 0;
 
@@ -38,13 +74,18 @@ export async function POST() {
       }
 
       // Filter out prizes that are out of stock
-      const availablePrizes: Prize[] = prizes.filter(
+      let availablePrizes: Prize[] = prizes.filter(
         (p: Prize) => p.stock === null || p.stock_used < p.stock
       );
 
+      // Apply Force Lose setting
+      if (forceLose) {
+        availablePrizes = availablePrizes.filter((p: Prize) => p.is_zonk);
+      }
+
       if (availablePrizes.length === 0) {
         return NextResponse.json(
-          { error: 'All prizes are currently out of stock.' },
+          { error: forceLose ? 'Semua hadiah Zonk/Kalah sedang habis.' : 'All prizes are currently out of stock.' },
           { status: 400 }
         );
       }

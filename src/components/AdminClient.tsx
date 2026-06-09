@@ -38,12 +38,17 @@ interface AdminClientProps {
   initialPrizes: Prize[];
   totalSpins: number;
   winStats: WinStat[];
+  initialSettings: {
+    force_lose: boolean;
+    spin_pin: string;
+  };
 }
 
 export default function AdminClient({
   initialPrizes,
   totalSpins,
   winStats,
+  initialSettings,
 }: AdminClientProps) {
   const router = useRouter();
   const [prizes, setPrizes] = useState<Prize[]>(initialPrizes);
@@ -51,6 +56,46 @@ export default function AdminClient({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Global Settings States
+  const [settings, setSettings] = useState({
+    force_lose: initialSettings?.force_lose || false,
+    spin_pin: initialSettings?.spin_pin || '',
+  });
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [settingsSuccess, setSettingsSuccess] = useState(false);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingSettings(true);
+    setSettingsError(null);
+    setSettingsSuccess(false);
+
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(settings),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Gagal menyimpan pengaturan.');
+      }
+
+      setSettingsSuccess(true);
+      router.refresh();
+      setTimeout(() => setSettingsSuccess(false), 3000);
+    } catch (err) {
+      console.error(err);
+      setSettingsError(err instanceof Error ? err.message : 'Terjadi kesalahan.');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
 
   // Map win stats by prize name for quick lookup
   const winStatsMap = useMemo(() => {
@@ -298,6 +343,82 @@ export default function AdminClient({
                 </p>
               )}
             </div>
+          </div>
+          
+          {/* Card 3: Global Settings */}
+          <div className="rounded-2xl border border-slate-800 bg-[#0F172A]/70 p-6 shadow-xl space-y-4">
+            <div className="flex items-center gap-1.5 border-b border-slate-800 pb-3">
+              <Settings className="h-4 w-4 text-indigo-400" />
+              <h4 className="font-bold text-sm text-slate-200">
+                Pengaturan Stand
+              </h4>
+            </div>
+
+            <form onSubmit={handleSaveSettings} className="space-y-4 text-xs">
+              {/* Force Zonk Mode */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="font-semibold text-slate-300 block">
+                    Mode Paksa Zonk (Kalah)
+                  </label>
+                  <span className="text-[10px] text-slate-500 block max-w-[140px] leading-relaxed mt-0.5">
+                    Jika aktif, semua putaran otomatis menghasilkan Zonk.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSettings(s => ({ ...s, force_lose: !s.force_lose }))}
+                  className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out outline-none ${
+                    settings.force_lose ? 'bg-rose-600' : 'bg-slate-800'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      settings.force_lose ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* PIN Code Setup */}
+              <div className="space-y-1.5">
+                <label className="font-semibold text-slate-300 block">
+                  PIN Pengaman Putar
+                </label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={settings.spin_pin}
+                  onChange={(e) => setSettings(s => ({ ...s, spin_pin: e.target.value }))}
+                  placeholder="Kosongkan untuk menonaktifkan"
+                  className="w-full rounded-xl border border-slate-800 bg-slate-950/70 px-3.5 py-2 font-medium text-slate-200 placeholder:text-slate-600 focus:border-indigo-500 focus:outline-none transition-colors"
+                />
+                <span className="text-[10px] text-slate-500 block leading-normal">
+                  Jika diisi, penjaga stand harus memasukkan PIN ini untuk setiap putaran roda.
+                </span>
+              </div>
+
+              {settingsError && (
+                <div className="text-[10px] font-semibold text-rose-400 bg-rose-950/30 border border-rose-500/15 rounded-lg p-2">
+                  {settingsError}
+                </div>
+              )}
+
+              {settingsSuccess && (
+                <div className="text-[10px] font-semibold text-emerald-400 bg-emerald-950/30 border border-emerald-500/15 rounded-lg p-2">
+                  Pengaturan berhasil disimpan!
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={savingSettings}
+                className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2.5 font-bold text-white shadow-lg shadow-indigo-600/15 hover:bg-indigo-500 active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none"
+              >
+                <Save className="h-3.5 w-3.5" />
+                <span>{savingSettings ? 'Menyimpan...' : 'Simpan Pengaturan'}</span>
+              </button>
+            </form>
           </div>
         </div>
 

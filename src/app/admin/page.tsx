@@ -31,14 +31,28 @@ export default async function AdminDashboard() {
 
   if (statsError) {
     console.error('Error fetching win statistics from view:', statsError.message || statsError);
-    // If the database view is not created yet, we can log it and fall back to empty statistics
   }
+
+  // 4. Fetch settings
+  const { data: settingsData, error: settingsError } = await supabaseAdmin
+    .from('settings')
+    .select('*');
+
+  if (settingsError) {
+    console.warn('Error fetching settings table (might not exist yet):', settingsError.message || settingsError);
+  }
+
+  const initialSettings = {
+    force_lose: settingsData?.find(s => s.key === 'force_lose')?.value === 'true',
+    spin_pin: settingsData?.find(s => s.key === 'spin_pin')?.value || '',
+  };
 
   return (
     <AdminClient
       initialPrizes={prizes || []}
       totalSpins={totalSpins || 0}
       winStats={winStats || []}
+      initialSettings={initialSettings}
     />
   );
 }
