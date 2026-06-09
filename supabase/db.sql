@@ -66,8 +66,7 @@ CREATE TABLE IF NOT EXISTS settings (
 -- Seed initial settings
 INSERT INTO settings (key, value)
 VALUES
-  ('force_lose', 'false'),
-  ('spin_pin', '')
+  ('force_lose', 'false')
 ON CONFLICT (key) DO NOTHING;
 
 

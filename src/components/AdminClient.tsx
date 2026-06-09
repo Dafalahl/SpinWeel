@@ -40,7 +40,6 @@ interface AdminClientProps {
   winStats: WinStat[];
   initialSettings: {
     force_lose: boolean;
-    spin_pin: string;
   };
 }
 
@@ -60,7 +59,6 @@ export default function AdminClient({
   // Global Settings States
   const [settings, setSettings] = useState({
     force_lose: initialSettings?.force_lose || false,
-    spin_pin: initialSettings?.spin_pin || '',
   });
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsSuccess, setSettingsSuccess] = useState(false);
@@ -378,24 +376,6 @@ export default function AdminClient({
                     }`}
                   />
                 </button>
-              </div>
-
-              {/* PIN Code Setup */}
-              <div className="space-y-1.5">
-                <label className="font-semibold text-slate-300 block">
-                  PIN Pengaman Putar
-                </label>
-                <input
-                  type="text"
-                  maxLength={6}
-                  value={settings.spin_pin}
-                  onChange={(e) => setSettings(s => ({ ...s, spin_pin: e.target.value }))}
-                  placeholder="Kosongkan untuk menonaktifkan"
-                  className="w-full rounded-xl border border-slate-800 bg-slate-950/70 px-3.5 py-2 font-medium text-slate-200 placeholder:text-slate-600 focus:border-indigo-500 focus:outline-none transition-colors"
-                />
-                <span className="text-[10px] text-slate-500 block leading-normal">
-                  Jika diisi, penjaga stand harus memasukkan PIN ini untuk setiap putaran roda.
-                </span>
               </div>
 
               {settingsError && (

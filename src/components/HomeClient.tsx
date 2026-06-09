@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { HelpCircle, Lock, X } from 'lucide-react';
+import { HelpCircle } from 'lucide-react';
 import SpinWheel from './SpinWheel';
 import PrizeModal from './PrizeModal';
 
@@ -24,16 +24,10 @@ export default function HomeClient({ initialPrizes }: HomeClientProps) {
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [wonPrize, setWonPrize] = useState<{ name: string; color: string; is_zonk: boolean } | null>(null);
 
-  // PIN Lock settings
-  const [pinModalOpen, setPinModalOpen] = useState<boolean>(false);
-  const [pinInput, setPinInput] = useState<string>('');
-  const [pinError, setPinError] = useState<string | null>(null);
-
-  const handleSpinClick = React.useCallback(async (enteredPin?: string) => {
+  const handleSpinClick = React.useCallback(async () => {
     if (isSpinning || prizes.length === 0) return;
 
     setError(null);
-    setPinError(null);
     setIsSpinning(true);
     setWinningIndex(null);
 
@@ -43,20 +37,7 @@ export default function HomeClient({ initialPrizes }: HomeClientProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ pin: enteredPin || '' }),
       });
-
-      if (response.status === 403) {
-        const errData = await response.json();
-        if (errData.error === 'PIN_REQUIRED') {
-          setPinModalOpen(true);
-          setIsSpinning(false);
-          if (enteredPin) {
-            setPinError('PIN Pengaman Stand salah.');
-          }
-          return;
-        }
-      }
 
       if (!response.ok) {
         const errData = await response.json();
@@ -64,11 +45,6 @@ export default function HomeClient({ initialPrizes }: HomeClientProps) {
       }
 
       const result = await response.json(); // { prize_name, color, is_zonk }
-      
-      // Close PIN modal if correct
-      setPinModalOpen(false);
-      setPinInput('');
-      setPinError(null);
 
       // Find the index of the won prize in our local array
       const index = prizes.findIndex((p) => p.name === result.prize_name);
@@ -101,13 +77,10 @@ export default function HomeClient({ initialPrizes }: HomeClientProps) {
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
-        // Prevent default space action (scrolling) if we are typing inside a password or text field
-        if (document.activeElement?.tagName === 'INPUT') return;
-
         e.preventDefault();
         
-        // Trigger spin if eligible (no spin in progress, winner modal closed, PIN modal closed)
-        if (!isSpinning && !modalOpen && !pinModalOpen && prizes.length > 0) {
+        // Trigger spin if eligible
+        if (!isSpinning && !modalOpen && prizes.length > 0) {
           handleSpinClick();
         }
       }
@@ -117,7 +90,7 @@ export default function HomeClient({ initialPrizes }: HomeClientProps) {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isSpinning, modalOpen, pinModalOpen, prizes.length, handleSpinClick]);
+  }, [isSpinning, modalOpen, prizes.length, handleSpinClick]);
 
   const handleSpinComplete = () => {
     setIsSpinning(false);
@@ -236,78 +209,7 @@ export default function HomeClient({ initialPrizes }: HomeClientProps) {
         onClose={handleCloseModal}
       />
 
-      {/* PIN Lock Modal Popup */}
-      {pinModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md transition-all duration-300">
-          <div className="w-full max-w-sm transform overflow-hidden rounded-3xl border border-slate-800 bg-[#0F172A]/90 p-8 shadow-2xl transition-all duration-300 text-center relative">
-            <button
-              onClick={() => {
-                setPinModalOpen(false);
-                setPinInput('');
-                setPinError(null);
-              }}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
-            
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-400 mb-4 border border-indigo-500/20">
-              <Lock className="h-6 w-6" />
-            </div>
 
-            <h3 className="text-xl font-bold text-slate-100">PIN Pengaman Stand</h3>
-            <p className="mt-2 text-xs text-slate-400 leading-relaxed text-balance">
-              Membuka putaran roda memerlukan PIN keamanan penjaga stand. Silakan masukkan PIN Anda.
-            </p>
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSpinClick(pinInput);
-              }}
-              className="mt-6 space-y-4"
-            >
-              <div>
-                <input
-                  type="password"
-                  value={pinInput}
-                  onChange={(e) => setPinInput(e.target.value)}
-                  placeholder="••••"
-                  className="w-full text-center rounded-xl border border-slate-700 bg-slate-950/80 px-4 py-3 text-lg font-bold text-white placeholder:text-slate-600 focus:border-indigo-500 focus:outline-none transition-colors tracking-widest"
-                  autoFocus
-                  required
-                />
-              </div>
-
-              {pinError && (
-                <div className="text-xs font-semibold text-rose-400 bg-rose-950/30 border border-rose-500/20 rounded-lg p-2.5">
-                  {pinError}
-                </div>
-              )}
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPinModalOpen(false);
-                    setPinInput('');
-                    setPinError(null);
-                  }}
-                  className="flex-1 rounded-xl bg-slate-800 hover:bg-slate-700 px-4 py-3 text-sm font-semibold text-slate-300 hover:text-white transition-all"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:opacity-95 px-4 py-3 text-sm font-semibold text-white transition-all shadow-md shadow-indigo-500/15"
-                >
-                  Verifikasi & Putar
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </main>
   );
 }

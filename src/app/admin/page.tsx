@@ -44,7 +44,6 @@ export default async function AdminDashboard() {
 
   const initialSettings = {
     force_lose: settingsData?.find(s => s.key === 'force_lose')?.value === 'true',
-    spin_pin: settingsData?.find(s => s.key === 'spin_pin')?.value || '',
   };
 
   return (

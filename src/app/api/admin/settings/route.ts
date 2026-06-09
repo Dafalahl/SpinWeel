@@ -27,7 +27,6 @@ export async function GET(request: Request) {
 
     const settingsObj = {
       force_lose: settingsData?.find(s => s.key === 'force_lose')?.value === 'true',
-      spin_pin: settingsData?.find(s => s.key === 'spin_pin')?.value || '',
     };
 
     return NextResponse.json(settingsObj);
@@ -43,14 +42,12 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { force_lose, spin_pin } = await request.json() as {
+    const { force_lose } = await request.json() as {
       force_lose: boolean;
-      spin_pin: string;
     };
 
     const updates = [
-      { key: 'force_lose', value: force_lose ? 'true' : 'false' },
-      { key: 'spin_pin', value: (spin_pin || '').trim() }
+      { key: 'force_lose', value: force_lose ? 'true' : 'false' }
     ];
 
     const { error } = await supabaseAdmin

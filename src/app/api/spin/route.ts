@@ -13,7 +13,7 @@ interface Prize {
   active: boolean;
 }
 
-export async function POST(request: Request) {
+export async function POST() {
   try {
     // Fetch global settings from DB
     const { data: settingsData, error: settingsError } = await supabaseAdmin
@@ -21,34 +21,12 @@ export async function POST(request: Request) {
       .select('*');
 
     let forceLose = false;
-    let spinPin = '';
 
     if (!settingsError && settingsData) {
       const forceLoseSetting = settingsData.find(s => s.key === 'force_lose');
-      const spinPinSetting = settingsData.find(s => s.key === 'spin_pin');
-      
       forceLose = forceLoseSetting?.value === 'true';
-      spinPin = spinPinSetting?.value || '';
     } else if (settingsError) {
       console.warn('Settings table not found or query failed, falling back to default:', settingsError.message || settingsError);
-    }
-
-    // Verify PIN if enabled
-    if (spinPin.trim() !== '') {
-      let bodyPin = '';
-      try {
-        const body = await request.json();
-        bodyPin = body.pin || '';
-      } catch {
-        // Body might be empty or invalid JSON
-      }
-
-      if (bodyPin !== spinPin) {
-        return NextResponse.json(
-          { error: 'PIN_REQUIRED', message: 'PIN Pengaman Stand diperlukan atau salah.' },
-          { status: 403 }
-        );
-      }
     }
 
     const maxRetries = 5;
