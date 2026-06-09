@@ -225,7 +225,7 @@ export default function SpinWheel({
 
     initAudio();
 
-    const duration = 9000; // 9 seconds for dramatic slow-down effect
+    const duration = 6500; // 6.5 seconds – faster but still smooth
     const startRotation = angleRef.current % (2 * Math.PI);
     const numSegments = prizes.length;
     const anglePerSegment = (2 * Math.PI) / numSegments;
@@ -248,8 +248,8 @@ export default function SpinWheel({
       baseTargetAngle -= 2 * Math.PI;
     }
 
-    // Add 10 full counter-clockwise rotations for dramatic effect (negative = CCW)
-    const totalRotationTarget = baseTargetAngle - 2 * Math.PI * 10;
+    // Add 15 full counter-clockwise rotations for higher peak speed (negative = CCW)
+    const totalRotationTarget = baseTargetAngle - 2 * Math.PI * 15;
     const deltaRotation = totalRotationTarget - startRotation; // Always negative = counter-clockwise
     
     const startTime = performance.now();
