@@ -73,41 +73,48 @@ export async function POST(request: Request) {
       }
     }
 
-    // 3. Perform upserts
-    if (upserts && upserts.length > 0) {
-      const cleanUpserts = upserts.map((p) => {
-        const item: {
-          id?: string;
-          name: string;
-          color: string;
-          probability: number;
-          stock: number | null;
-          is_zonk: boolean;
-          active: boolean;
-        } = {
-          name: p.name,
-          color: p.color || '#3B82F6',
-          probability: Number(p.probability),
-          stock: p.stock === '' || p.stock === null || p.stock === undefined ? null : Math.max(0, typeof p.stock === 'string' ? parseInt(p.stock, 10) : Number(p.stock)),
-          is_zonk: p.is_zonk,
-          active: p.active,
-        };
+    // 3. Separate new records (temp IDs) from existing records (real UUIDs)
+    const newPrizes = upserts.filter((p) => p.id.startsWith('temp-'));
+    const existingPrizes = upserts.filter((p) => p.id && !p.id.startsWith('temp-'));
 
-        // If it's a real DB record (not a temp client ID), preserve the ID
-        if (p.id && !p.id.startsWith('temp-')) {
-          item.id = p.id;
-        }
+    // Helper to build a clean record
+    const buildClean = (p: PrizeInput, includeId: boolean) => ({
+      ...(includeId ? { id: p.id } : {}),
+      name: p.name,
+      color: p.color || '#3B82F6',
+      probability: Number(p.probability),
+      stock:
+        p.stock === '' || p.stock === null || p.stock === undefined
+          ? null
+          : Math.max(
+              0,
+              typeof p.stock === 'string' ? parseInt(p.stock, 10) : Number(p.stock)
+            ),
+      is_zonk: p.is_zonk,
+      active: p.active,
+    });
 
-        return item;
-      });
+    // 3a. INSERT brand-new prizes (no id needed — DB will generate UUID)
+    if (newPrizes.length > 0) {
+      const inserts = newPrizes.map((p) => buildClean(p, false));
+      const { error: insertError } = await supabaseAdmin.from('prizes').insert(inserts);
 
+      if (insertError) {
+        console.error('Insert error:', insertError.message || insertError);
+        return NextResponse.json({ error: 'Gagal menyimpan hadiah baru.' }, { status: 500 });
+      }
+    }
+
+    // 3b. UPSERT existing prizes (preserve their UUID so the row is updated, not duplicated)
+    if (existingPrizes.length > 0) {
+      const upsertRows = existingPrizes.map((p) => buildClean(p, true));
       const { error: upsertError } = await supabaseAdmin
         .from('prizes')
-        .upsert(cleanUpserts);
+        .upsert(upsertRows, { onConflict: 'id' });
 
       if (upsertError) {
         console.error('Upsert error:', upsertError.message || upsertError);
-        return NextResponse.json({ error: 'Gagal menyimpan daftar hadiah.' }, { status: 500 });
+        return NextResponse.json({ error: 'Gagal memperbarui data hadiah.' }, { status: 500 });
       }
     }
 
